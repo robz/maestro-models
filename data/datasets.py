@@ -22,11 +22,11 @@ def augmentIdxs(x):
 
 
 class MaestroMidiDataset(torch.utils.data.Dataset):
-  def __init__(self, df, split, directory=MAESTRO_DIRECTORY, num_tracks=None, max_data_len=10000, device='cpu'):
+  def __init__(self, df, split, directory=MAESTRO_DIRECTORY, num_tracks=None, max_seq_len=10000, device='cpu'):
     self.df = df
     self.split = split
     self.num_tracks = num_tracks if num_tracks is not None else len(df)
-    self.max_data_len = max_data_len
+    self.max_seq_len = max_seq_len
     self.device = device
 
     # load the tensors on to the GPU
@@ -47,8 +47,8 @@ class MaestroMidiDataset(torch.utils.data.Dataset):
     filename = self.df['midi_filename'][i]
     x = self.cache[filename]
     # apply data augmentation: random clipping + pitch transposition + stretching delta times
-    start = random.randint(0, max(0, len(x) - self.max_data_len - 1)) if augment_data else 0
-    end = start + self.max_data_len
+    start = random.randint(0, max(0, len(x) - self.max_seq_len - 1)) if augment_data else 0
+    end = start + self.max_seq_len
     x = x[start:end].long()
     pitch_transposition = augmentIdxs(x)[0] if augment_data else 0
     return {'input': x, 'start': start, 'pitch_transposition': pitch_transposition}
@@ -118,10 +118,10 @@ class MaestroMidiCasual(MaestroMidiDataset):
 
   @classmethod
   def get_dataloaders(Dataset, **dataloader_args):
-    if 'max_data_len' in dataloader_args:
-      dataloader_args['max_data_len'] += 1
+    if 'max_seq_len' in dataloader_args:
+      dataloader_args['max_seq_len'] += 1
     else:
-      dataloader_args['max_data_len'] = 10001
+      dataloader_args['max_seq_len'] = 10001
     return super().get_dataloaders(**dataloader_args)
 
 
@@ -149,7 +149,8 @@ class MaestroMidiCasualComposerConditioning(MaestroMidiCasual):
     }
 
   @classmethod
-  def get_dataloaders(Dataset, df, num_composers, **dataloader_args):
+  def get_dataloaders(Dataset, num_composers, **dataloader_args):
+    df = dataloader_args['df']
     composers = getTopComposers(df, num_composers)
     composer_df = df[df.canonical_composer.isin(composers)]
     return super().get_dataloaders(df=composer_df, composers=composers, **dataloader_args)

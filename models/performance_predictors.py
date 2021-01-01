@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-
-from maestro_data_utils import NUM_CHANNELS
+from data.maestro_data_utils import NUM_CHANNELS
+from models.model_utils import get_pos_enc
 
 
 class PerformanceRNN(nn.Module):
