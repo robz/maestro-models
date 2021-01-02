@@ -18,6 +18,7 @@ class PerformanceRNN(nn.Module):
     self.embedding = nn.Embedding(num_embeddings=in_channels, embedding_dim=hidden_channels)
     self.lstm = nn.LSTM(input_size=hidden_channels, hidden_size=hidden_channels, num_layers=num_layers, dropout=dropout)
     self.linear_out = nn.Linear(in_features=hidden_channels, out_features=in_channels)
+    self.name = F'performance_rnn_ic{in_channels}_hc{hidden_channels}_nl{num_layers}_d{int(dropout * 100)}'
 
   # x is [batch, seq_len]
   # returns [batch, channels, seq_len]
@@ -53,6 +54,7 @@ class PerformanceTransformer(nn.Module):
     encoder_layer = nn.TransformerEncoderLayer(d_model=hidden_channels, nhead=nhead, dim_feedforward=dim_feedforward, dropout=dropout)
     self.encoder = nn.TransformerEncoder(encoder_layer=encoder_layer, num_layers=num_layers)
     self.linear_out = nn.Linear(in_features=hidden_channels, out_features=in_channels)
+    self.name = F'performance_trans_ic{in_channels}_hc{hidden_channels}_df{dim_feedforward}_nl{num_layers}_nh{nhead}_d{int(dropout * 100)}_msl{max_seq_len}_mbs{max_batch_size}'
 
   # x is [batch, seq_len]
   # returns [batch, channels, seq_len]
@@ -86,6 +88,7 @@ class PerformanceWavenet(nn.Module):
     self.layers = nn.ModuleList(layers)
     self.linear_out = nn.Linear(in_features=hidden_channels, out_features=in_channels)
     self.receptive_field = 2 ** num_layers
+    self.name = F'performance_wavenet_ic{in_channels}_hc{hidden_channels}_nl{num_layers}'
 
   # x is [batch, seq_len]
   # returns [seq_len, batch, channels]

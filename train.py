@@ -61,7 +61,7 @@ elif args.type == 'performance_predictor':
 
 
 print('training...')
-epoch_monitor = EpochMonitor()
+epoch_monitor = EpochMonitor(model.name)
 best_model = train(
   model.to('cuda'),
   dataloaders['train'],

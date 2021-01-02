@@ -21,6 +21,7 @@ class LSTMClassifier(nn.Module):
     self.lstm = nn.LSTM(input_size=hidden_channels, hidden_size=hidden_channels, num_layers=num_layers, dropout=dropout)
     self.linear = nn.Linear(in_features=hidden_channels * 2, out_features=num_composers)
     self.hidden_channels = hidden_channels
+    self.name = F'classifier_lstm_nc{num_composers}_ic{in_channels}_hc{hidden_channels}_nl{num_layers}_d{int(dropout * 100)}'
 
   # x is [batch, seq_len]
   # returns [batch, num_composers]
@@ -54,6 +55,7 @@ class TransformerClassifier(nn.Module):
     self.linear_out = nn.Linear(in_features=hidden_channels, out_features=num_composers)
     #self.register_buffer('query', torch.ones(1, max_batch_size, hidden_channels))
     #self.attention_pool = nn.MultiheadAttention(embed_dim=hidden_channels, num_heads=nhead)
+    self.name = F'classifier_trans_nc{num_composers}_ic{in_channels}_hc{hidden_channels}_df{dim_feedforward}_nl{num_layers}_nh{nhead}_d{int(dropout * 100)}_msl{max_seq_len}_mbs{max_batch_size}'
 
   # x is [batch, seq_len]
   # returns [batch, num_composers]
@@ -87,6 +89,7 @@ class ConvClassifier(nn.Module):
     if use_attention_pooling:
       self.register_buffer('query', torch.ones(1, max_batch_size, hidden_channels))
       self.attention_pool = nn.MultiheadAttention(embed_dim=hidden_channels, num_heads=1, dropout=attention_dropout)
+    self.name = F'classifier_conv_nc{num_composers}_ic{in_channels}_hc{hidden_channels}_uap{int(use_attention_pooling)}_ad{int(attention_dropout * 100)}_mbs{max_batch_size}'
       
   # x is [batch, seq_len]
   # returns [batch, num_composers]
