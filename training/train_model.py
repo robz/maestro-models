@@ -13,8 +13,6 @@ def train(model, train_iter, val_iter, num_epochs, epoch_cb):
 
   train_len = len(train_iter)
   val_len = len(val_iter)
-  best_val_acc = 0.0
-  best_model = None
 
   for epoch in range(num_epochs):
     train_loss = train_acc = val_loss = val_acc = 0.0
@@ -43,11 +41,4 @@ def train(model, train_iter, val_iter, num_epochs, epoch_cb):
     val_acc /= val_len
     time_elapsed = time.time() - start
 
-    if val_acc > best_val_acc:
-      best_val_acc = val_acc
-      best_model = model.state_dict()
-
     epoch_cb(epoch, train_loss, train_acc, val_loss, val_acc, time_elapsed, model)
-
-  model.load_state_dict(best_model)
-  return model

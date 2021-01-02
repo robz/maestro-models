@@ -20,13 +20,14 @@ parser.add_argument('--model', choices=['conv', 'lstm', 'transformer'], required
 parser.add_argument('--epochs', type=int, required=True)
 parser.add_argument('--max_seq_len', type=int, default=2048)
 parser.add_argument('--num_composers', type=int, default=5)
+parser.add_argument('--restore', type=str)
 
 
 args = parser.parse_args()
 print('args:', args)
 
-df = getDataFrame()
 
+df = getDataFrame()
 
 if args.type == 'composer_classifier':
   dataloaders = MaestroMidiComposer.get_dataloaders(
@@ -60,9 +61,13 @@ elif args.type == 'performance_predictor':
     )
 
 
-print('training...')
 epoch_monitor = EpochMonitor(model.name)
-best_model = train(
+if args.restore is not None:
+  epoch_monitor.restore(model, args.restore)
+
+
+print('training...')
+train(
   model.to('cuda'),
   dataloaders['train'],
   dataloaders['validation'],
