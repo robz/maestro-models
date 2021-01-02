@@ -35,7 +35,7 @@ class EpochMonitor:
     self.val_accs.append(val_acc)
     state = {'state_dict': model.state_dict(), 'val_loss': val_loss}
     torch.save(state, F'{self.directory}/{self.name}-recent.pt')
-    if val_loss > self.best_val_loss:
+    if val_loss < self.best_val_loss:
       self.best_val_loss = val_loss
       torch.save(state, F'{self.directory}/{self.name}-best.pt')
     if epoch % self.model_save_period == 0:

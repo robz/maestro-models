@@ -2,6 +2,10 @@
 [x] save models every n epochs
 [x] load recent models
 [ ] log to tensorboard
-[ ] predictions
+[x] tensor predictions
+[ ] midi predictions
+[ ] priming for predictions
 [ ] preprocessing
 [ ] requirements.txt
+[ ] don't store transformer mask and pos_enc in state_dict
+[ ] clean up wavenet: reuse internal forward, address no pad

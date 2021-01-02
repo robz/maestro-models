@@ -8,7 +8,7 @@ from models.model_utils import get_pos_enc
 
 class PerformanceRNN(nn.Module):
   def __init__(
-    self, 
+    self,
     in_channels=NUM_CHANNELS,
     hidden_channels=256,
     num_layers=2,
@@ -29,6 +29,23 @@ class PerformanceRNN(nn.Module):
     x = self.linear_out(x)
     return x.transpose(0, 1).transpose(1, 2) # CEL requires [batch, channels, seq_len]
 
+  # prime is [seq_len]
+  # returns [steps]
+  def forward_steps(self, steps, prime=torch.tensor([256], device='cuda'), greedy=False):
+    ret = torch.empty(steps, device='cuda')
+    x = prime[:, None] # LSTM requires [seq_len, batch, channels]
+    hidden = None
+    for i in range(steps):
+      output, hidden = self.lstm(self.embedding(x), hidden)
+      output = self.linear_out(output[-1:])
+      if greedy:
+        x = torch.argmax(output, 2)
+      else:
+        distribution = torch.distributions.Categorical(torch.softmax(output, 2))
+        x = distribution.sample()
+      ret[i] = x[0, 0]
+    return ret.to('cpu')
+
 
 def get_casual_mask(sz):
   mask = torch.triu(torch.ones(sz, sz)).T
@@ -37,13 +54,13 @@ def get_casual_mask(sz):
 
 class PerformanceTransformer(nn.Module):
   def __init__(
-    self, 
+    self,
     in_channels=NUM_CHANNELS,
     max_seq_len=2048,
-    nhead=1, 
+    nhead=2,
     hidden_channels=256,
-    dim_feedforward=512, 
-    num_layers=2,
+    dim_feedforward=512,
+    num_layers=3,
     dropout=0.1,
     max_batch_size=4,
   ):
@@ -60,17 +77,39 @@ class PerformanceTransformer(nn.Module):
   # returns [batch, channels, seq_len]
   def forward(self, x):
     x = x.transpose(0, 1) # transformer requires [seq_len, batch, channels]
-    x = self.embedding(x)
     seq_len = x.shape[0]
-    x += self.pos_encoding[:seq_len]
+    x = self.embedding(x) + self.pos_encoding[:seq_len]
     x = self.encoder(x, self.mask[:seq_len, :seq_len])
     x = self.linear_out(x)
     return x.transpose(0, 1).transpose(1, 2) # CEL requires [batch, channels, seq_len]
 
+  # prime is [seq_len]
+  # returns [steps]
+  def forward_steps(self, steps, prime=torch.tensor([256], device='cuda'), greedy=False):
+    ret = torch.empty(steps, device='cuda')
+
+    prime_len = len(prime)
+    x = prime[:, None] # transformer requires [seq_len, batch, channels]
+    x = self.embedding(x) + self.pos_encoding[:prime_len]
+
+    for seq_len in range(prime_len, steps + prime_len):
+      output = self.encoder(x, self.mask[:seq_len, :seq_len])[-1:]
+      output = self.linear_out(output)
+      if greedy:
+        output = torch.argmax(output, 2)
+      else:
+        distribution = torch.distributions.Categorical(torch.softmax(output, 2))
+        output = distribution.sample()
+      ret[seq_len - prime_len] = output[0, 0]
+      output = self.embedding(output) + self.pos_encoding[seq_len:seq_len+1]
+      x = torch.cat([x, output])
+
+    return ret.to('cpu')
+
 
 class PerformanceWavenet(nn.Module):
   def __init__(
-    self, 
+    self,
     in_channels=NUM_CHANNELS,
     hidden_channels=256,
     num_layers=8,
@@ -86,7 +125,11 @@ class PerformanceWavenet(nn.Module):
         dilation=2**i,
       ))
     self.layers = nn.ModuleList(layers)
-    self.linear_out = nn.Linear(in_features=hidden_channels, out_features=in_channels)
+    self.linear_out = nn.Conv1d(
+      in_channels=hidden_channels,
+      out_channels=in_channels,
+      kernel_size=1,
+    )
     self.receptive_field = 2 ** num_layers
     self.name = F'performance_wavenet_ic{in_channels}_hc{hidden_channels}_nl{num_layers}'
 
@@ -96,10 +139,44 @@ class PerformanceWavenet(nn.Module):
     x = self.embedding(x)
     x = x.transpose(1, 2) # conv1d requires [batch, channels, seq_len]
     for i, layer in enumerate(self.layers):
+      prev = x
       if pad:
         # pad only left to preserve causality
         x = F.pad(x, (2 ** i, 0))
-      x = layer(x)
-    x = x.transpose(1, 2) # Linear requires [*, channels]
+      x = F.relu(layer(x)) + prev
     x = self.linear_out(x)
-    return x.transpose(1, 2) # CEL requires [batch, channels, seq_len]
+    return x
+
+  # prime is [seq_len]
+  # returns [steps]
+  def forward_steps(self, steps, prime=None, greedy=False):
+    if prime is None:
+      prime = torch.tensor([256] * self.receptive_field, device='cuda')
+    else:
+      prime = prime[-self.receptive_field:] # only the receptive field matters
+
+    ret = torch.empty(steps, device='cuda')
+
+    output = self.embedding(prime)
+    output = output.T[None, ...] # conv1d requires [batch, channels, seq_len]
+    for i in range(steps):
+      x = output
+
+      for layer in self.layers:
+        prev = x
+        x = F.relu(layer(x))
+        x = x + prev[:, :, -x.shape[2]:]
+      x = self.linear_out(x)
+
+      if greedy:
+        x = torch.argmax(x, 1) # [batch, seq_len]
+      else:
+        x = torch.softmax(x, 1)
+        x = x.transpose(1, 2) # Categorical expects [*, channesl]
+        x = torch.distributions.Categorical(x).sample()
+
+      ret[i] = x[0, 0]
+      x = self.embedding(x).transpose(1, 2) # conv1d requires [batch, channels, seq_len]
+      output = torch.cat([output[:, :, -self.receptive_field:], x], axis=2)
+
+    return ret.to('cpu')
