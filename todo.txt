@@ -1,0 +1,6 @@
+[ ] save best models
+[ ] save models every n epochs
+[ ] load recent models
+[ ] log to tensorboard
+[ ] predictions
+[ ] preprocessing
