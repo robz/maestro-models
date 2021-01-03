@@ -71,6 +71,7 @@ class PerformanceTransformer(nn.Module):
     encoder_layer = nn.TransformerEncoderLayer(d_model=hidden_channels, nhead=nhead, dim_feedforward=dim_feedforward, dropout=dropout)
     self.encoder = nn.TransformerEncoder(encoder_layer=encoder_layer, num_layers=num_layers)
     self.linear_out = nn.Linear(in_features=hidden_channels, out_features=in_channels)
+    self.max_seq_len = max_seq_len
     self.name = F'performance_trans_ic{in_channels}_hc{hidden_channels}_df{dim_feedforward}_nl{num_layers}_nh{nhead}_d{int(dropout * 100)}_msl{max_seq_len}_mbs{max_batch_size}'
 
   # x is [batch, seq_len]
@@ -102,7 +103,7 @@ class PerformanceTransformer(nn.Module):
         output = distribution.sample()
       ret[seq_len - prime_len] = output[0, 0]
       output = self.embedding(output) + self.pos_encoding[seq_len:seq_len+1]
-      x = torch.cat([x, output])
+      x = torch.cat([x[-self.max_seq_len:], output])
 
     return ret.to('cpu')
 

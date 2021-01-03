@@ -1,8 +1,13 @@
 import argparse
+import os
 import torch
 
 from models import performance_predictors
 from training.epoch_monitor import SAVE_MODEL_DIRECTORY
+from data.midi_utils import idxsToMidi, writeMidi
+
+
+SAVE_MIDI_DIRECTORY = os.getcwd() + '/music'
 
 parser = argparse.ArgumentParser(
   usage="%(prog)s --model [MODEL] --file [FILE] --steps [N]",
@@ -38,4 +43,11 @@ state = torch.load(name)
 model.load_state_dict(state['state_dict'])
 val_loss = state['val_loss']
 print(F'loaded {name} which had validation loss {val_loss}')
-print(model.to('cuda').forward_steps(args.steps, greedy=args.greedy))
+result = model.to('cuda').forward_steps(args.steps, greedy=args.greedy).to('cpu')
+
+os.makedirs(SAVE_MIDI_DIRECTORY, exist_ok=True)
+midiname = F'{SAVE_MIDI_DIRECTORY}/{args.file}.mid'
+mf, errors = idxsToMidi(result.long().numpy())
+print('errors:', errors)
+writeMidi(mf, filename=midiname)
+print(F'saved to {midiname}')
