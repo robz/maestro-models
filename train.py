@@ -37,12 +37,12 @@ if args.type == 'composer_classifier':
     device='cuda'
   )
   if args.model == 'conv':
-    model = composer_classifiers.ConvClassifier(args.num_composers)
+    model = composer_classifiers.ConvClassifier(num_composers=args.num_composers)
   elif args.model == 'lstm':
-    model = composer_classifiers.LSTMClassifier(args.num_composers)
+    model = composer_classifiers.LSTMClassifier(num_composers=args.num_composers)
   elif args.model == 'transformer':
     model = composer_classifiers.TransformerClassifier(
-      args.num_composers,
+      num_composers=args.num_composers,
       max_seq_len=args.max_seq_len,
     )
 elif args.type == 'performance_predictor':

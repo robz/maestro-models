@@ -4,11 +4,11 @@ import torch.nn.functional as F
 
 
 from data.maestro_data_utils import NUM_CHANNELS
-from models.model_utils import get_pos_enc
+from models.model_utils import get_pos_enc, SaveArgsModule
 
 
-class LSTMClassifier(nn.Module):
-  def __init__(
+class LSTMClassifier(SaveArgsModule):
+  def _init(
     self, 
     num_composers,
     in_channels=NUM_CHANNELS,
@@ -16,7 +16,6 @@ class LSTMClassifier(nn.Module):
     num_layers=2,
     dropout=0.1
   ):
-    super().__init__()
     self.embedding = nn.Embedding(num_embeddings=in_channels, embedding_dim=hidden_channels)
     self.lstm = nn.LSTM(input_size=hidden_channels, hidden_size=hidden_channels, num_layers=num_layers, dropout=dropout)
     self.linear = nn.Linear(in_features=hidden_channels * 2, out_features=num_composers)
@@ -34,8 +33,8 @@ class LSTMClassifier(nn.Module):
     return x
 
 
-class TransformerClassifier(nn.Module):
-  def __init__(
+class TransformerClassifier(SaveArgsModule):
+  def _init(
     self, 
     num_composers,
     in_channels=NUM_CHANNELS,
@@ -47,7 +46,6 @@ class TransformerClassifier(nn.Module):
     dropout=0.1,
     max_batch_size=4,
   ):
-    super().__init__()
     self.embedding = nn.Embedding(num_embeddings=in_channels, embedding_dim=hidden_channels)
     self.register_buffer('pos_encoding', get_pos_enc(max_seq_len, hidden_channels))
     encoder_layer = nn.TransformerEncoderLayer(d_model=hidden_channels, nhead=nhead, dim_feedforward=dim_feedforward, dropout=dropout)
@@ -70,8 +68,8 @@ class TransformerClassifier(nn.Module):
     return x
 
 
-class ConvClassifier(nn.Module):
-  def __init__(
+class ConvClassifier(SaveArgsModule):
+  def _init(
     self, 
     num_composers,
     in_channels=NUM_CHANNELS,
@@ -80,7 +78,6 @@ class ConvClassifier(nn.Module):
     max_batch_size=4,
     attention_dropout=0.0,
   ):
-    super().__init__()
     self.embedding = nn.Embedding(num_embeddings=in_channels, embedding_dim=hidden_channels)
     self.conv1 = nn.Conv1d(in_channels=hidden_channels, out_channels=hidden_channels, kernel_size=3)
     self.conv2 = nn.Conv1d(in_channels=hidden_channels, out_channels=hidden_channels, kernel_size=3)

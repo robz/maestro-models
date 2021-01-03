@@ -9,3 +9,17 @@ def get_pos_enc(seq_len, d_model):
   pos_enc[:, 0, 0::2] = torch.sin(x)
   pos_enc[:, 0, 1::2] = torch.cos(x)
   return pos_enc
+
+
+class SaveArgsModule(torch.nn.Module):
+  def __init__(self, **args):
+    super().__init__()
+    self.params = args
+    self._init(**args)
+
+  def getArgs(self):
+    return self.params
+
+  def setArgs(self, args):
+    self.params = args
+    self._init(**args)

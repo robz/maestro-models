@@ -3,18 +3,17 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from data.maestro_data_utils import NUM_CHANNELS
-from models.model_utils import get_pos_enc
+from models.model_utils import get_pos_enc, SaveArgsModule
 
 
-class PerformanceRNN(nn.Module):
-  def __init__(
+class PerformanceRNN(SaveArgsModule):
+  def _init(
     self,
     in_channels=NUM_CHANNELS,
     hidden_channels=256,
     num_layers=2,
     dropout=0.1
   ):
-    super().__init__()
     self.embedding = nn.Embedding(num_embeddings=in_channels, embedding_dim=hidden_channels)
     self.lstm = nn.LSTM(input_size=hidden_channels, hidden_size=hidden_channels, num_layers=num_layers, dropout=dropout)
     self.linear_out = nn.Linear(in_features=hidden_channels, out_features=in_channels)
@@ -52,8 +51,8 @@ def get_casual_mask(sz):
   return (mask - 1).masked_fill_(mask == 0, float('-inf'))
 
 
-class PerformanceTransformer(nn.Module):
-  def __init__(
+class PerformanceTransformer(SaveArgsModule):
+  def _init(
     self,
     in_channels=NUM_CHANNELS,
     max_seq_len=2048,
@@ -64,7 +63,6 @@ class PerformanceTransformer(nn.Module):
     dropout=0.1,
     max_batch_size=4,
   ):
-    super().__init__()
     self.embedding = nn.Embedding(num_embeddings=in_channels, embedding_dim=hidden_channels)
     self.register_buffer('pos_encoding', get_pos_enc(max_seq_len, hidden_channels))
     self.register_buffer('mask', get_casual_mask(max_seq_len))
@@ -108,14 +106,13 @@ class PerformanceTransformer(nn.Module):
     return ret.to('cpu')
 
 
-class PerformanceWavenet(nn.Module):
-  def __init__(
+class PerformanceWavenet(SaveArgsModule):
+  def _init(
     self,
     in_channels=NUM_CHANNELS,
     hidden_channels=256,
     num_layers=8,
   ):
-    super().__init__()
     self.embedding = nn.Embedding(num_embeddings=in_channels, embedding_dim=hidden_channels)
     layers = []
     for i in range(num_layers):

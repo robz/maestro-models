@@ -40,9 +40,11 @@ elif args.model == 'transformer':
 
 name = F'{SAVE_MODEL_DIRECTORY}/{args.file}'
 state = torch.load(name)
+model.setArgs(state['args'])
 model.load_state_dict(state['state_dict'])
 val_loss = state['val_loss']
 print(F'loaded {name} which had validation loss {val_loss}')
+print('predicting...')
 result = model.to('cuda').forward_steps(args.steps, greedy=args.greedy).to('cpu')
 
 os.makedirs(SAVE_MIDI_DIRECTORY, exist_ok=True)

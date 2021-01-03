@@ -1,0 +1,7 @@
+# python 3.7.8 
+GPUtil==1.4.0
+matplotlib==3.3.2
+music21==6.3.0
+pandas==1.1.4
+tensorboard=2.4.0
+torch==1.7.1
