@@ -2,7 +2,7 @@
 [x] save models every n epochs
 [x] load recent models
 [x] serialize/deserialize models
-[ ] log to tensorboard
+[x] log to tensorboard
 [x] tensor predictions
 [x] midi predictions
 [ ] priming for predictions
@@ -12,3 +12,4 @@
 [ ] clean up wavenet: reuse internal forward, address no pad
 [ ] add synthetic data copy task to test predictors
 [ ] fix position encoding in transformer forward_step
+[ ] black

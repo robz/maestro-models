@@ -21,6 +21,7 @@ parser.add_argument('--epochs', type=int, required=True)
 parser.add_argument('--max_seq_len', type=int, default=2048)
 parser.add_argument('--num_composers', type=int, default=5)
 parser.add_argument('--restore', type=str)
+parser.add_argument('--tensorboard_dir', type=str)
 
 
 args = parser.parse_args()
@@ -61,7 +62,7 @@ elif args.type == 'performance_predictor':
     )
 
 
-epoch_monitor = EpochMonitor(model.name)
+epoch_monitor = EpochMonitor(model.name, args.tensorboard_dir)
 if args.restore is not None:
   epoch_monitor.restore(model, args.restore)
 
