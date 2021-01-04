@@ -12,12 +12,13 @@ class PerformanceRNN(SaveArgsModule):
     in_channels=NUM_CHANNELS,
     hidden_channels=256,
     num_layers=2,
-    dropout=0.1
+    dropout=0.1,
+    prefix=''
   ):
     self.embedding = nn.Embedding(num_embeddings=in_channels, embedding_dim=hidden_channels)
     self.lstm = nn.LSTM(input_size=hidden_channels, hidden_size=hidden_channels, num_layers=num_layers, dropout=dropout)
     self.linear_out = nn.Linear(in_features=hidden_channels, out_features=in_channels)
-    self.name = F'performance_rnn_ic{in_channels}_hc{hidden_channels}_nl{num_layers}_d{int(dropout * 100)}'
+    self.name = F'{prefix}performance_rnn_ic{in_channels}_hc{hidden_channels}_nl{num_layers}_d{int(dropout * 100)}'
 
   # x is [batch, seq_len]
   # returns [batch, channels, seq_len]
@@ -62,6 +63,7 @@ class PerformanceTransformer(SaveArgsModule):
     num_layers=3,
     dropout=0.1,
     max_batch_size=4,
+    prefix='',
   ):
     self.embedding = nn.Embedding(num_embeddings=in_channels, embedding_dim=hidden_channels)
     self.register_buffer('pos_encoding', get_pos_enc(max_seq_len, hidden_channels))
@@ -70,7 +72,7 @@ class PerformanceTransformer(SaveArgsModule):
     self.encoder = nn.TransformerEncoder(encoder_layer=encoder_layer, num_layers=num_layers)
     self.linear_out = nn.Linear(in_features=hidden_channels, out_features=in_channels)
     self.max_seq_len = max_seq_len
-    self.name = F'performance_trans_ic{in_channels}_hc{hidden_channels}_df{dim_feedforward}_nl{num_layers}_nh{nhead}_d{int(dropout * 100)}_msl{max_seq_len}_mbs{max_batch_size}'
+    self.name = F'{prefix}performance_trans_ic{in_channels}_hc{hidden_channels}_df{dim_feedforward}_nl{num_layers}_nh{nhead}_d{int(dropout * 100)}_msl{max_seq_len}_mbs{max_batch_size}'
 
   # x is [batch, seq_len]
   # returns [batch, channels, seq_len]
@@ -84,7 +86,7 @@ class PerformanceTransformer(SaveArgsModule):
 
   # prime is [seq_len]
   # returns [steps]
-  def forward_steps(self, steps, prime=torch.tensor([256], device='cuda'), greedy=False):
+  def forward_steps(self, steps, prime, greedy=False):
     ret = torch.empty(steps, device='cuda')
 
     prime_len = len(prime)
@@ -112,6 +114,7 @@ class PerformanceWavenet(SaveArgsModule):
     in_channels=NUM_CHANNELS,
     hidden_channels=256,
     num_layers=8,
+    prefix='',
   ):
     self.embedding = nn.Embedding(num_embeddings=in_channels, embedding_dim=hidden_channels)
     layers = []
@@ -129,7 +132,7 @@ class PerformanceWavenet(SaveArgsModule):
       kernel_size=1,
     )
     self.receptive_field = 2 ** num_layers
-    self.name = F'performance_wavenet_ic{in_channels}_hc{hidden_channels}_nl{num_layers}'
+    self.name = F'{prefix}performance_wavenet_ic{in_channels}_hc{hidden_channels}_nl{num_layers}'
 
   # x is [batch, seq_len]
   # returns [seq_len, batch, channels]
@@ -148,10 +151,12 @@ class PerformanceWavenet(SaveArgsModule):
   # prime is [seq_len]
   # returns [steps]
   def forward_steps(self, steps, prime=None, greedy=False):
-    if prime is None:
-      prime = torch.tensor([256] * self.receptive_field, device='cuda')
+    if len(prime) < self.receptive_field:
+      print(F'warning: prime len smaller than receptive field, so padding ({len(prime)} < {self.receptive_field})')
+      pad = True
     else:
       prime = prime[-self.receptive_field:] # only the receptive field matters
+      pad = False
 
     ret = torch.empty(steps, device='cuda')
 
@@ -160,8 +165,11 @@ class PerformanceWavenet(SaveArgsModule):
     for i in range(steps):
       x = output
 
-      for layer in self.layers:
+      for j, layer in enumerate(self.layers):
         prev = x
+        if pad:
+          # pad only left to preserve causality
+          x = F.pad(x, (2 ** j, 0))
         x = F.relu(layer(x))
         x = x + prev[:, :, -x.shape[2]:]
       x = self.linear_out(x)

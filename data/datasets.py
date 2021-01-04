@@ -66,7 +66,7 @@ class MaestroMidiDataset(torch.utils.data.Dataset):
       df_split.reset_index(drop=True, inplace=True)
       dataloaders[split] = torch.utils.data.DataLoader(
         Dataset(df=df_split, split=split, **dataset_args),
-        batch_size=batch_size, 
+        batch_size=batch_size,
         shuffle=shuffle,
         num_workers=0,
         collate_fn=Dataset.batch_collate
@@ -154,3 +154,40 @@ class MaestroMidiCasualComposerConditioning(MaestroMidiCasual):
     composers = getTopComposers(df, num_composers)
     composer_df = df[df.canonical_composer.isin(composers)]
     return super().get_dataloaders(df=composer_df, composers=composers, **dataloader_args)
+
+
+class SyntheticCopySymbolDataset(torch.utils.data.Dataset):
+  def __init__(self, seq, item_len, num_items):
+    self.seq = seq
+    self.item_len = item_len
+    self.num_items = num_items
+    self.seq_len = len(seq)
+
+  def __len__(self):
+    return self.num_items
+
+  def __getitem__(self, i):
+    start = random.randint(0, max(0, self.seq_len - self.item_len - 2))
+    end = start + self.item_len + 1
+    x = self.seq[start:end]
+    return {'input': x[:-1], 'output': x[1:]}
+
+  @classmethod
+  def get_dataloaders(
+    Dataset,
+    num_symbols=10,
+    seq_len=16,
+    item_len=128,
+    device='cpu',
+    batch_size=1,
+    num_items=100
+  ):
+    seq = torch.randint(num_symbols, (seq_len,))
+    print('seq:', seq)
+    seq = torch.cat([seq] * (item_len // seq_len * 2)).to(device)
+    dataloader = torch.utils.data.DataLoader(
+      Dataset(seq, item_len=item_len, num_items=num_items),
+      batch_size=batch_size,
+      num_workers=0,
+    )
+    return {'train': dataloader, 'validation': dataloader}

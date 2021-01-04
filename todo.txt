@@ -10,6 +10,7 @@
 [x] requirements.txt
 [ ] don't store transformer mask and pos_enc in state_dict
 [ ] clean up wavenet: reuse internal forward, address no pad
-[ ] add synthetic data copy task to test predictors
+[x] add synthetic data copy task to test predictors
 [ ] fix position encoding in transformer forward_step
 [ ] black
+[ ] composer conditioning

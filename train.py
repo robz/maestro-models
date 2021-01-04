@@ -1,6 +1,6 @@
 import argparse
 
-from data.datasets import MaestroMidiComposer, MaestroMidiCasual
+from data.datasets import MaestroMidiComposer, MaestroMidiCasual, SyntheticCopySymbolDataset
 from data.maestro_data_utils import getDataFrame
 from models import composer_classifiers, performance_predictors
 from training.epoch_monitor import EpochMonitor
@@ -11,7 +11,11 @@ parser = argparse.ArgumentParser(
   usage="%(prog)s [TYPE] --model [MODEL] --epochs [N]",
   description="Train a model",
 )
-parser.add_argument('type', choices=['composer_classifier', 'performance_predictor'])
+parser.add_argument('type', choices=[
+  'composer_classifier',
+  'performance_predictor',
+  'synthetic_predictor',
+])
 parser.add_argument(
   "-v", "--version", action="version",
   version = f"{parser.prog} version 1.0.0"
@@ -59,6 +63,30 @@ elif args.type == 'performance_predictor':
   elif args.model == 'transformer':
     model = performance_predictors.PerformanceTransformer(
       max_seq_len=args.max_seq_len,
+    )
+elif args.type == 'synthetic_predictor':
+  prefix = F'{args.type}_'
+  item_len = 128
+  num_symbols = 10
+  dataloaders = SyntheticCopySymbolDataset.get_dataloaders(
+    item_len=item_len,
+    device='cuda',
+  )
+  if args.model == 'conv':
+    model = performance_predictors.PerformanceWavenet(
+      prefix=prefix,
+      in_channels=num_symbols,
+    )
+  elif args.model == 'lstm':
+    model = performance_predictors.PerformanceRNN(
+      prefix=prefix,
+      in_channels=num_symbols,
+    )
+  elif args.model == 'transformer':
+    model = performance_predictors.PerformanceTransformer(
+      prefix=prefix,
+      in_channels=num_symbols,
+      max_seq_len=item_len,
     )
 
 

@@ -10,9 +10,13 @@ from data.midi_utils import idxsToMidi, writeMidi
 SAVE_MIDI_DIRECTORY = os.getcwd() + '/music'
 
 parser = argparse.ArgumentParser(
-  usage="%(prog)s --model [MODEL] --file [FILE] --steps [N]",
+  usage="%(prog)s [TYPE] --model [MODEL] --file [FILE] --steps [N]",
   description="Sample from a model for some number of steps",
 )
+parser.add_argument('type', choices=[
+  'performance_predictor',
+  'synthetic_predictor',
+])
 parser.add_argument(
   "--version",
   action="version",
@@ -28,6 +32,11 @@ print('args:', args)
 
 
 max_seq_len = 2048
+
+if args.type == 'performance_predictor':
+  prime = torch.tensor([256], device='cuda')
+elif args.type == 'synthetic_predictor':
+  prime = torch.tensor([0], device='cuda')
 
 if args.model == 'conv':
   model = performance_predictors.PerformanceWavenet()
@@ -45,11 +54,18 @@ model.load_state_dict(state['state_dict'])
 val_loss = state['val_loss']
 print(F'loaded {name} which had validation loss {val_loss}')
 print('predicting...')
-result = model.to('cuda').forward_steps(args.steps, greedy=args.greedy).to('cpu')
+result = model.to('cuda').forward_steps(
+  args.steps,
+  prime=prime,
+  greedy=args.greedy,
+).to('cpu')
 
-os.makedirs(SAVE_MIDI_DIRECTORY, exist_ok=True)
-midiname = F'{SAVE_MIDI_DIRECTORY}/{args.file}.mid'
-mf, errors = idxsToMidi(result.long().numpy())
-print('errors:', errors)
-writeMidi(mf, filename=midiname)
-print(F'saved to {midiname}')
+if args.type == 'performance_predictor':
+  os.makedirs(SAVE_MIDI_DIRECTORY, exist_ok=True)
+  midiname = F'{SAVE_MIDI_DIRECTORY}/{args.file}.mid'
+  mf, errors = idxsToMidi(result.long().numpy())
+  print('errors:', errors)
+  writeMidi(mf, filename=midiname)
+  print(F'saved to {midiname}')
+elif args.type == 'synthetic_predictor':
+  print('prediction:', result)
