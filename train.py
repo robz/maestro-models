@@ -6,6 +6,14 @@ from models import composer_classifiers, performance_predictors
 from training.epoch_monitor import EpochMonitor
 from training.train_model import train
 
+import json
+
+
+def model_params_json(s):
+  params = json.loads(s)
+  assert isinstance(params, dict)
+  return params
+
 
 parser = argparse.ArgumentParser(
   usage="%(prog)s [TYPE] --model [MODEL] --epochs [N]",
@@ -26,6 +34,8 @@ parser.add_argument('--max_seq_len', type=int, default=2048)
 parser.add_argument('--num_composers', type=int, default=5)
 parser.add_argument('--restore', type=str)
 parser.add_argument('--tensorboard_dir', type=str)
+parser.add_argument('--model_params', type=model_params_json, default={})
+parser.add_argument('--verbose', action='store_true')
 
 
 args = parser.parse_args()
@@ -39,16 +49,17 @@ if args.type == 'composer_classifier':
     num_composers=args.num_composers,
     df=df,
     max_seq_len=args.max_seq_len,
-    device='cuda'
+    device='cuda',
   )
   if args.model == 'conv':
-    model = composer_classifiers.ConvClassifier(num_composers=args.num_composers)
+    model = composer_classifiers.ConvClassifier(num_composers=args.num_composers, **args.model_params)
   elif args.model == 'lstm':
-    model = composer_classifiers.LSTMClassifier(num_composers=args.num_composers)
+    model = composer_classifiers.LSTMClassifier(num_composers=args.num_composers, **args.model_params)
   elif args.model == 'transformer':
     model = composer_classifiers.TransformerClassifier(
       num_composers=args.num_composers,
       max_seq_len=args.max_seq_len,
+      **args.model_params
     )
 elif args.type == 'performance_predictor':
   dataloaders = MaestroMidiCasual.get_dataloaders(
@@ -57,40 +68,43 @@ elif args.type == 'performance_predictor':
     device='cuda'
   )
   if args.model == 'conv':
-    model = performance_predictors.PerformanceWavenet()
+    model = performance_predictors.PerformanceWavenet( **args.model_params)
   elif args.model == 'lstm':
-    model = performance_predictors.PerformanceRNN()
+    model = performance_predictors.PerformanceRNN( **args.model_params)
   elif args.model == 'transformer':
     model = performance_predictors.PerformanceTransformer(
       max_seq_len=args.max_seq_len,
+      **args.model_params
     )
 elif args.type == 'synthetic_predictor':
   prefix = F'{args.type}_'
-  item_len = 128
   num_symbols = 10
   dataloaders = SyntheticCopySymbolDataset.get_dataloaders(
-    item_len=item_len,
+    item_len=args.max_seq_len,
     device='cuda',
   )
   if args.model == 'conv':
     model = performance_predictors.PerformanceWavenet(
       prefix=prefix,
       in_channels=num_symbols,
+      **args.model_params
     )
   elif args.model == 'lstm':
     model = performance_predictors.PerformanceRNN(
       prefix=prefix,
       in_channels=num_symbols,
+      **args.model_params
     )
   elif args.model == 'transformer':
     model = performance_predictors.PerformanceTransformer(
       prefix=prefix,
       in_channels=num_symbols,
-      max_seq_len=item_len,
+      max_seq_len=args.max_seq_len,
+      **args.model_params
     )
 
 
-epoch_monitor = EpochMonitor(model.name, args.tensorboard_dir)
+epoch_monitor = EpochMonitor(model.name, args.tensorboard_dir, verbose=args.verbose)
 if args.restore is not None:
   epoch_monitor.restore(model, args.restore)
 

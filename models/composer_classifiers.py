@@ -47,7 +47,7 @@ class TransformerClassifier(SaveArgsModule):
     max_batch_size=4,
   ):
     self.embedding = nn.Embedding(num_embeddings=in_channels, embedding_dim=hidden_channels)
-    self.register_buffer('pos_encoding', get_pos_enc(max_seq_len, hidden_channels))
+    self.register_buffer('pos_encoding', get_pos_enc(max_seq_len, hidden_channels), persistent=False)
     encoder_layer = nn.TransformerEncoderLayer(d_model=hidden_channels, nhead=nhead, dim_feedforward=dim_feedforward, dropout=dropout)
     self.encoder = nn.TransformerEncoder(encoder_layer=encoder_layer, num_layers=num_layers)
     self.linear_out = nn.Linear(in_features=hidden_channels, out_features=num_composers)

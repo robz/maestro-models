@@ -6,11 +6,14 @@
 [x] tensor predictions
 [x] midi predictions
 [ ] priming for predictions
+[ ] composer conditioning
 [x] preprocessing
 [x] requirements.txt
-[ ] don't store transformer mask and pos_enc in state_dict
-[ ] clean up wavenet: reuse internal forward, address no pad
+[x] don't store transformer mask and pos_enc in state_dict
 [x] add synthetic data copy task to test predictors
+[x] pass model configs
+[ ] debug wavenet for copy taek
+[ ] clean up wavenet: reuse internal forward, address no pad
 [ ] fix position encoding in transformer forward_step
+[ ] fast forward for transformer
 [ ] black
-[ ] composer conditioning

@@ -8,9 +8,10 @@ SAVE_MODEL_DIRECTORY = os.getcwd() + '/saved_models'
 
 
 class EpochMonitor:
-  def __init__(self, name, tensorboard_dir, model_dir=SAVE_MODEL_DIRECTORY, model_save_period=50):
+  def __init__(self, name, tensorboard_dir, model_dir=SAVE_MODEL_DIRECTORY, model_save_period=50, verbose=False):
     self.name = name
     self.model_dir = model_dir
+    self.verbose = verbose
     self.train_losses = []
     self.train_accs = []
     self.val_losses = []
@@ -62,7 +63,8 @@ class EpochMonitor:
 
 
   def save(self, state, name):
-    print(F'saving model {name}')
+    if self.verbose:
+      print(F'saving model {name}')
     torch.save(state, name)
 
 
